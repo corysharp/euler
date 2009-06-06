@@ -46,9 +46,14 @@ typedef struct sudoku {
     sudoku_cell_t* cols;
     int nsolved;
     int sum;
-    bool do_euler_sum;
-    bool do_print_solutions;
+    int solution_flags;
 } sudoku_t;
+
+enum {
+    FLAG_DO_EULER_SUM = 0x01,
+    FLAG_DO_PRINT_SOLUTIONS = 0x02,
+    FLAG_DO_PRINT_COMPACT_SOLUTIONS = 0x04,
+};
 
 void sudoku_init( sudoku_t* self ) {
     int i;
@@ -63,8 +68,7 @@ void sudoku_init( sudoku_t* self ) {
     self->super.max_solutions = 1;
     self->nsolved = 0;
     self->sum = 0;
-    self->do_euler_sum = false;
-    self->do_print_solutions = false;
+    self->solution_flags = 0;
     self->cells = (sudoku_cell_t*)malloc( 4*9*9*9*sizeof(sudoku_cell_t) );
     self->cols = (sudoku_cell_t*)malloc( 4*9*9*sizeof(sudoku_cell_t) );
     for (i=0; i<4*9*9; i++) {
@@ -104,17 +108,17 @@ void sudoku_preset( sudoku_t* self, const char* puzzle ) {
 void sudoku_found_solution( dlx_t* dlx ) {
     sudoku_t* self = (sudoku_t*)dlx;
     self->nsolved++;
-    if (self->do_euler_sum || self->do_print_solutions) {
+    if (self->solution_flags != 0) {
         char sol[9*9];
         int i;
         for (i=0; i<dlx->visit.size; i++) {
             sudoku_cell_t* c = (sudoku_cell_t*)dlx->visit.stack[i];
             sol[9*c->row+c->col] = c->val;
         }
-        if (self->do_euler_sum) {
+        if ((self->solution_flags & FLAG_DO_EULER_SUM) != 0) {
             self->sum += sol[0]*100 + sol[1]*10 + sol[2];
         }
-        if (self->do_print_solutions) {
+        if ((self->solution_flags & FLAG_DO_PRINT_SOLUTIONS) != 0) {
             int j;
             for (i=0; i<9; i++) {
                 for (j=0; j<9; j++) {
@@ -128,6 +132,15 @@ void sudoku_found_solution( dlx_t* dlx ) {
                     printf( "\n" );
                 }
             }
+        }
+        if ((self->solution_flags & FLAG_DO_PRINT_COMPACT_SOLUTIONS) != 0) {
+            int j;
+            for (i=0; i<9; i++) {
+                for (j=0; j<9; j++) {
+                    printf( "%d", sol[9*i+j] );
+                }
+            }
+            printf( "\n" );
         }
     }
 }
@@ -154,11 +167,17 @@ int sudoku_main( int argc, char** argv ) {
     for (n=1; n<argc; n++) {
         const char* opt = argv[n];
         if (opt[0] == '-') {
-            if (strcmp( opt, "-e" ) == 0) {
-                sudoku.do_euler_sum = true;
+            if (strcmp( opt, "-a" ) == 0) {
+                sudoku.super.max_solutions = ((~(unsigned int)0) >> 1);
+            }
+            else if (strcmp( opt, "-c" ) == 0) {
+                sudoku.solution_flags |= FLAG_DO_PRINT_COMPACT_SOLUTIONS;
+            }
+            else if (strcmp( opt, "-e" ) == 0) {
+                sudoku.solution_flags |= FLAG_DO_EULER_SUM;
             }
             else if (strcmp( opt, "-p" ) == 0) {
-                sudoku.do_print_solutions = true;
+                sudoku.solution_flags |= FLAG_DO_PRINT_SOLUTIONS;
             }
             else {
                 fprintf( stderr, "unknown command line option \"%s\"\n", opt );
@@ -178,6 +197,8 @@ int sudoku_main( int argc, char** argv ) {
         printf("usage: dancing_sudoku [puzzles.txt]\n");
         printf("\n");
         printf("Options:\n");
+        printf("    -a  find all solutions, not just the first\n");
+        printf("    -c  print compact solutions\n");
         printf("    -e  calculate Project Euler sum\n");
         printf("    -p  print solutions\n");
         printf("\n");
@@ -230,7 +251,7 @@ int sudoku_main( int argc, char** argv ) {
 
     t1 = nano_time();
 
-    if (sudoku.do_euler_sum) {
+    if ((sudoku.solution_flags & FLAG_DO_EULER_SUM) != 0) {
         printf( "Project Euler sum %d\n", sudoku.sum );
     }
     printf( "%d out of %d puzzles solved\n", sudoku.nsolved, nloaded );

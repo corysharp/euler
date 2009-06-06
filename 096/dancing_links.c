@@ -188,64 +188,51 @@ void dlx_search( dlx_t* self, dlx_found_solution_t found_solution ) {
 
 #if 1
 void dlx_search( dlx_t* self, dlx_found_solution_t found_solution ) {
-    dlx_cell_t* x = self->root.right;
+    dlx_cell_t* c;
     dlx_cell_t* j;
+    dlx_cell_t* r;
     int depth = 0;
-    for (;;) {
 recurse:
-        if (x == x->column) {
-            if (x == &self->root) {
-                self->num_solutions++;
-                if (found_solution != NULL) {
-                    found_solution( self );
-                }
-            }
-            else {
-                for (j=x->right; j!=&self->root; j=j->right) {
-                    if (j->size < x->size)
-                        x = j;
-                }
-                if (x->size > 0) {
-                    dlx_cover( self, x );
-                    x = x->down;
-                    if (x != x->column) {
-                        for (j=x->right; j!=x; j=j->right) {
-                            dlx_cover( self, j->column );
-                        }
-                        ptrstack_add_last( &self->visit, x );
-                        x = self->root.right;
-                        depth++;
-                        goto recurse;
-                    }
-                }
-            }
+    // track depth to know when to exit
+    depth++;
+    c = self->root.right;
+    if (c == &self->root) {
+        self->num_solutions++;
+        found_solution( self );
+    }
+    else {
+        for (j=c->right; j!=&self->root; j=j->right) {
+            if (j->size < c->size)
+                c = j;
         }
-        else {
-            for (j=x->left; j!=x; j=j->left) {
-                dlx_uncover( self, j->column );
-            }
-            ptrstack_remove_last( &self->visit );
-            depth--;
-            if (self->num_solutions < self->max_solutions) {
-                x = x->down;
-                if (x != x->column) {
-                    for (j=x->right; j!=x; j=j->right) {
-                        dlx_cover( self, j->column );
-                    }
-                    ptrstack_add_last( &self->visit, x );
-                    x = self->root.right;
-                    depth++;
-                    goto recurse;
+        if (c->size > 0) {
+            dlx_cover( self, c );
+            for (r=c->down; r!=c; r=r->down) {
+                ptrstack_add_last( &self->visit, r );
+                for (j=r->right; j!=r; j=j->right) {
+                    dlx_cover( self, j->column );
                 }
+                // convert the old dlx_search recursion to just a goto followed
+                // by a label.
+                goto recurse;
+resume:
+                for (j=r->left; j!=r; j=j->left) {
+                    dlx_uncover( self, j->column );
+                }
+                ptrstack_remove_last( &self->visit );
+
+                if (self->num_solutions >= self->max_solutions)
+                    break;
             }
-            dlx_uncover( self, x->column );
+            dlx_uncover( self, r->column );
         }
-        if (depth > 0) {
-            x = (dlx_cell_t*)ptrstack_peek_last( &self->visit );
-        }
-        else {
-            return;
-        }
+    }
+    // if in recursion indicated by non-zero depth, restore r and c and resume
+    if (--depth > 0) {
+        r = (dlx_cell_t*)ptrstack_peek_last( &self->visit );
+        c = r->column;
+        goto resume;
     }
 }
 #endif
+
