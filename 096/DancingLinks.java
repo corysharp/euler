@@ -1,4 +1,5 @@
 import java.util.ArrayDeque;
+import java.util.Arrays;
 
 public abstract class DancingLinks {
 
@@ -128,6 +129,7 @@ public abstract class DancingLinks {
         c.left.right = c;
     }
 
+/*
     void search() {
         Cell c = root.right;
         if (c == root) {
@@ -157,6 +159,69 @@ public abstract class DancingLinks {
                 }
                 uncover(c);
             }
+        }
+    }
+*/
+
+    void search() {
+        Cell x = root.right;
+        Cell j;
+        int depth = 0;
+        while (true) {
+            recurse:
+            do {
+                if (x == x.column) {
+                    if (x == root) {
+                        num_solutions++;
+                        foundSolution();
+                    }
+                    else {
+                        for (j=x.right; j!=root; j=j.right) {
+                            if (j.size < x.size)
+                                x = j;
+                        }
+                        if (x.size > 0) {
+                            cover(x);
+                            x = x.down;
+                            if (x != x.column) {
+                                for (j=x.right; j!=x; j=j.right) {
+                                    cover(j.column);
+                                }
+                                visit.addLast(x);
+                                x = root.right;
+                                depth++;
+                                break recurse;
+                            }
+                        }
+                    }
+                }
+                else {
+                    for (j=x.left; j!=x; j=j.left) {
+                        uncover(j.column);
+                    }
+                    visit.removeLast();
+                    depth--;
+                    if (num_solutions < max_solutions) {
+                        x = x.down;
+                        if (x != x.column) {
+                            for (j=x.right; j!=x; j=j.right) {
+                                cover(j.column);
+                            }
+                            visit.addLast(x);
+                            x = root.right;
+                            depth++;
+                            break recurse;
+                        }
+                    }
+                    uncover(x.column);
+                }
+                if (depth > 0) {
+                    x = visit.peekLast();
+                }
+                else {
+                    return;
+                }
+            } while (false);
         }
     }
 }

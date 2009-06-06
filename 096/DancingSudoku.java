@@ -23,7 +23,7 @@ public class DancingSudoku extends DancingLinks {
             this.col = (byte)col;
             this.box = (byte)box;
             this.val = (byte)val;
-            //this.name = pre+":r"+row+",c"+col+",b"+box+",v"+val;
+            this.name = pre+":r"+row+",c"+col+",b"+box+",v"+val;
         }
 
         Cell( Cell cell, String pre ) {
@@ -174,15 +174,17 @@ public class DancingSudoku extends DancingLinks {
             if (puzzle != null) {
                 nloaded++;
                 sudoku.solve( puzzle );
-                if ((nloaded & 1023) == 0)
-                    System.out.println("progress: "+nloaded+" puzzles");
             }
         }
 
         long t1 = System.nanoTime();
-        System.out.println( sudoku.nsolved+" out of "+nloaded+" puzzles solved in "
-                +((t1-t0)/1e9)+" seconds" );
-        System.out.println("sum "+sudoku.sum);
+
+        System.out.println();
+        System.out.format( "Project Euler sum %d\n", sudoku.sum );
+        System.out.format( "%d out of %d puzzles solved\n", sudoku.nsolved, nloaded );
+        System.out.format( "%.6f seconds\n", (t1-t0)/1e9 );
+        System.out.format( "%.1f puzzles/second\n", (nloaded*1e9)/(t1-t0) );
+        System.out.format( "%.3f microseconds/puzzle\n", (t1-t0)/(nloaded*1e3) );
     }
 }
 
