@@ -202,9 +202,16 @@ dlx_search_recurse:
         found_solution( self );
     }
     else {
-        for (j=c->right; j!=&self->root; j=j->right) {
-            if (j->size < c->size)
-                c = j;
+        // This scan for the smallest column is a hotspot.  Stop scanning if
+        // the column is size 0 or 1.
+        if (c->size > 1) {
+            for (j=c->right; j!=&self->root; j=j->right) {
+                if (j->size < c->size) {
+                    c = j;
+                    if (c->size <= 1)
+                        break;
+                }
+            }
         }
         if (c->size > 0) {
             dlx_cover( self, c );
@@ -226,7 +233,6 @@ dlx_search_resume:
                 for (j=r->left; j!=r; j=j->left) {
                     dlx_uncover( self, j->column );
                 }
-
                 if (self->num_solutions >= self->max_solutions)
                     break;
             }
