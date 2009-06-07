@@ -7,7 +7,7 @@ typedef struct ptrstack {
     int size;
 } ptrstack_t;
 
-void ptrstack_init( ptrstack_t* self );
+void ptrstack_init( ptrstack_t* self, int initial_capacity );
 void ptrstack_add_last( ptrstack_t* self, void* p );
 void ptrstack_remove_last( ptrstack_t* self );
 void* ptrstack_peek_last( ptrstack_t* self );

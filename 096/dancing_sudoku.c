@@ -152,7 +152,6 @@ void sudoku_solve( sudoku_t* self, const char* puzzle ) {
 }
 
 int sudoku_main( int argc, char** argv ) {
-    bool print_solution = false;
     const char* puzzle_filename = NULL;
     sudoku_t sudoku;
     FILE* fin;

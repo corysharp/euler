@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-void ptrstack_init( ptrstack_t* self ) {
+void ptrstack_init( ptrstack_t* self, int initial_capacity ) {
     self->size = 0;
-    self->capacity = 10;
+    self->capacity = initial_capacity;
     self->stack = (void**)malloc( self->capacity * sizeof(void*) );
     memset( self->stack, 0, self->capacity * sizeof(void*) );
 }
@@ -27,6 +27,9 @@ void ptrstack_remove_last( ptrstack_t* self ) {
 void* ptrstack_peek_last( ptrstack_t* self ) {
     if (self->size > 0) {
         return self->stack[ self->size - 1 ];
+    }
+    else {
+        return NULL;
     }
 }
 
@@ -96,18 +99,18 @@ void dlx_cell_append_to_row( dlx_cell_t* self, dlx_cell_t* tailcolumn, dlx_cell_
 
 void dlx_init( dlx_t* self ) {
     dlx_cell_init( &self->root );
-    ptrstack_init( &self->visit );
+    ptrstack_init( &self->visit, 100 );
     self->max_solutions = ((~(unsigned int)0) >> 1);
     self->num_solutions = 0;
 }
 
 void dlx_preset( dlx_t* self, dlx_cell_t* r ) {
     dlx_cell_t* j;
-    ptrstack_add_last( &self->visit, r );
     dlx_cover( self, r->column );
     for (j=r->right; j!=r; j=j->right) {
         dlx_cover( self, j->column );
     }
+    ptrstack_add_last( &self->visit, r );
 }
 
 void dlx_clear( dlx_t* self ) {
@@ -167,15 +170,15 @@ void dlx_search( dlx_t* self, dlx_found_solution_t found_solution ) {
         if (c->size > 0) {
             dlx_cover( self, c );
             for (r=c->down; r!=c; r=r->down) {
-                ptrstack_add_last( &self->visit, r );
                 for (j=r->right; j!=r; j=j->right) {
                     dlx_cover( self, j->column );
                 }
+                ptrstack_add_last( &self->visit, r );
                 dlx_search( self, found_solution );
+                ptrstack_remove_last( &self->visit );
                 for (j=r->left; j!=r; j=j->left) {
                     dlx_uncover( self, j->column );
                 }
-                ptrstack_remove_last( &self->visit );
 
                 if (self->num_solutions >= self->max_solutions)
                     break;
@@ -191,10 +194,8 @@ void dlx_search( dlx_t* self, dlx_found_solution_t found_solution ) {
     dlx_cell_t* c;
     dlx_cell_t* j;
     dlx_cell_t* r;
-    int depth = 0;
-recurse:
-    // track depth to know when to exit
-    depth++;
+    dlx_cell_t* last_preset = ptrstack_peek_last( &self->visit );
+dlx_search_recurse:
     c = self->root.right;
     if (c == &self->root) {
         self->num_solutions++;
@@ -208,18 +209,23 @@ recurse:
         if (c->size > 0) {
             dlx_cover( self, c );
             for (r=c->down; r!=c; r=r->down) {
-                ptrstack_add_last( &self->visit, r );
                 for (j=r->right; j!=r; j=j->right) {
                     dlx_cover( self, j->column );
                 }
-                // convert the old dlx_search recursion to just a goto followed
-                // by a label.
-                goto recurse;
-resume:
+                ptrstack_add_last( &self->visit, r );
+                goto dlx_search_recurse;
+dlx_search_resume:
+                r = (dlx_cell_t*)ptrstack_poll_last( &self->visit );
+                if (r == last_preset) {
+                    if (last_preset != NULL) {
+                        self->visit.size++; //undo poll_last
+                    }
+                    return;
+                }
+                c = r->column;
                 for (j=r->left; j!=r; j=j->left) {
                     dlx_uncover( self, j->column );
                 }
-                ptrstack_remove_last( &self->visit );
 
                 if (self->num_solutions >= self->max_solutions)
                     break;
@@ -227,12 +233,7 @@ resume:
             dlx_uncover( self, r->column );
         }
     }
-    // if in recursion indicated by non-zero depth, restore r and c and resume
-    if (--depth > 0) {
-        r = (dlx_cell_t*)ptrstack_peek_last( &self->visit );
-        c = r->column;
-        goto resume;
-    }
+    goto dlx_search_resume;
 }
 #endif
 

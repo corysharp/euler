@@ -1,5 +1,6 @@
-CFLAGS += -ggdb
 CFLAGS += -O3
+CFLAGS += -Wall
+CFLAGS += -ggdb
 LIBS += -lrt
 
 all: dancing_sudoku
